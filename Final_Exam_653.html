@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Nishat">
+<meta name="author" content="Parvez">
 
 <title>Final_Exam_653</title>
 <style>
@@ -19,6 +19,41 @@ ul.task-list{list-style: none;}
 ul.task-list li input[type="checkbox"] {
 width: 0.8em;
 margin: 0 0.8em 0.2em -1em;  vertical-align: middle;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+}
+pre.numberSource { margin-left: 3em; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -2183,7 +2218,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Author</div>
     <div class="quarto-title-meta-contents">
-             <p>Nishat </p>
+             <p>Parvez </p>
           </div>
   </div>
     
@@ -2196,7 +2231,928 @@ vertical-align: -.125em;
 </header>
 
 
+<section id="api-calls-to-chess.com" class="level1">
+<h1><strong>(1) API calls to chess.com</strong></h1>
+<section id="load-packages" class="level2">
+<h2 class="anchored" data-anchor-id="load-packages">Load Packages</h2>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.2.1     ✔ readr     2.2.0
+✔ forcats   1.0.1     ✔ stringr   1.6.0
+✔ ggplot2   4.0.3     ✔ tibble    3.3.1
+✔ lubridate 1.9.5     ✔ tidyr     1.3.2
+✔ purrr     1.2.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
 
+Attaching package: &#39;jsonlite&#39;
+
+
+The following object is masked from &#39;package:purrr&#39;:
+
+    flatten</code></pre>
+</div>
+</div>
+</section>
+<section id="player-list" class="level2">
+<h2 class="anchored" data-anchor-id="player-list">Player list</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>response <span class="ot">&lt;-</span> <span class="fu">GET</span>(<span class="st">&quot;https://api.chess.com/pub/country/US/players&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>player_list <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(response<span class="sc">$</span>content))<span class="sc">$</span>players</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>first_500 <span class="ot">&lt;-</span> player_list[<span class="dv">1</span><span class="sc">:</span><span class="dv">500</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="self-helper-function" class="level2">
+<h2 class="anchored" data-anchor-id="self-helper-function">Self Helper Function</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>get_player_data <span class="ot">&lt;-</span> <span class="cf">function</span>(username) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  info_response <span class="ot">&lt;-</span> <span class="fu">GET</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://api.chess.com/pub/player/&quot;</span>, username))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  stats_response <span class="ot">&lt;-</span> <span class="fu">GET</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://api.chess.com/pub/player/&quot;</span>, username, <span class="st">&quot;/stats&quot;</span>))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  info <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(info_response<span class="sc">$</span>content))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  stats <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="fu">rawToChar</span>(stats_response<span class="sc">$</span>content))</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">username =</span> username,</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(info<span class="sc">$</span>name), <span class="cn">NA</span>, info<span class="sc">$</span>name),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">followers =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(info<span class="sc">$</span>followers), <span class="cn">NA</span>, info<span class="sc">$</span>followers),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">location =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(info<span class="sc">$</span>location), <span class="cn">NA</span>, info<span class="sc">$</span>location),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">last_online =</span> <span class="fu">as.POSIXct</span>(info<span class="sc">$</span>last_online, <span class="at">origin =</span> <span class="st">&quot;1970-01-01&quot;</span>, <span class="at">tz =</span> <span class="st">&quot;UTC&quot;</span>),</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">rapid_last_rating =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>last<span class="sc">$</span>rating), <span class="cn">NA</span>, stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>last<span class="sc">$</span>rating),</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">rapid_best_rating =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>best<span class="sc">$</span>rating), <span class="cn">NA</span>, stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>best<span class="sc">$</span>rating),</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">rapid_record_win =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>win), <span class="cn">NA</span>, stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>win),</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">rapid_record_loss =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>loss), <span class="cn">NA</span>, stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>loss),</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">rapid_record_draw =</span> <span class="fu">ifelse</span>(<span class="fu">is.null</span>(stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>draw), <span class="cn">NA</span>, stats<span class="sc">$</span>chess_rapid<span class="sc">$</span>record<span class="sc">$</span>draw)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="running-for-the-first-500-players" class="level2">
+<h2 class="anchored" data-anchor-id="running-for-the-first-500-players">Running for the first 500 players</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>chess_players_df <span class="ot">&lt;-</span> <span class="fu">map_dfr</span>(first_500, get_player_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="viewing-the-data-frame" class="level3">
+<h3 class="anchored" data-anchor-id="viewing-the-data-frame">Viewing the data frame</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(chess_players_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 500
+Columns: 10
+$ username          &lt;chr&gt; &quot;-death-&quot;, &quot;-drake&quot;, &quot;-dua&quot;, &quot;-g-&quot;, &quot;-jarod-&quot;, &quot;-kin…
+$ name              &lt;chr&gt; &quot;Mani Hosseinpour Zonoozi&quot;, NA, NA, &quot;Hate Lover&quot;, &quot;J…
+$ followers         &lt;int&gt; 8, 26, 1, 152, 67, 24, 10, 3, 1, 5, 1, 5, 5, 3, 24, …
+$ location          &lt;chr&gt; &quot;Austin&quot;, NA, NA, NA, &quot;Boise, Idaho&quot;, &quot;Bum F Egypt&quot;,…
+$ last_online       &lt;dttm&gt; 2026-06-07 18:22:57, 2026-06-08 00:17:51, 2026-06-0…
+$ rapid_last_rating &lt;int&gt; 1016, 1420, 1018, 1770, 1863, 1626, 702, 698, 1742, …
+$ rapid_best_rating &lt;int&gt; 1158, 1537, NA, 1869, 1866, 1882, 1771, NA, 1742, 16…
+$ rapid_record_win  &lt;int&gt; 37, 14, 0, 3769, 1100, 46, 27, 0, 192, 107, NA, 1419…
+$ rapid_record_loss &lt;int&gt; 39, 4, 1, 3737, 887, 35, 22, 5, 172, 88, NA, 14258, …
+$ rapid_record_draw &lt;int&gt; 3, 1, 1, 266, 106, 3, 2, 0, 20, 8, NA, 453, 8, NA, 1…</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(chess_players_df)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>           username                     name followers     location
+1           -death- Mani Hosseinpour Zonoozi         8       Austin
+2            -drake                     &lt;NA&gt;        26         &lt;NA&gt;
+3              -dua                     &lt;NA&gt;         1         &lt;NA&gt;
+4               -g-               Hate Lover       152         &lt;NA&gt;
+5           -jarod-               Jarod Buus        67 Boise, Idaho
+6 -kingofthecastle-            King O&#39;Castle        24  Bum F Egypt
+          last_online rapid_last_rating rapid_best_rating rapid_record_win
+1 2026-06-07 18:22:57              1016              1158               37
+2 2026-06-08 00:17:51              1420              1537               14
+3 2026-06-08 01:39:01              1018                NA                0
+4 2026-06-07 18:11:36              1770              1869             3769
+5 2026-06-08 01:36:12              1863              1866             1100
+6 2026-06-08 00:46:36              1626              1882               46
+  rapid_record_loss rapid_record_draw
+1                39                 3
+2                 4                 1
+3                 1                 1
+4              3737               266
+5               887               106
+6                35                 3</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="identify-remove-duplicate-files" class="level1">
+<h1><strong>(2) Identify &amp; Remove Duplicate Files</strong></h1>
+<section id="r-code-in-the-quarto-document" class="level2">
+<h2 class="anchored" data-anchor-id="r-code-in-the-quarto-document">R code in the Quarto document</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>main_folder <span class="ot">&lt;-</span> <span class="st">&quot;question_2&quot;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>all_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> main_folder,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">pattern =</span> <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.csv$&quot;</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">recursive =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">full.names =</span> <span class="cn">TRUE</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(all_files)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 207</code></pre>
+</div>
+</div>
+</section>
+<section id="a-file-id-for-each-csv" class="level2">
+<h2 class="anchored" data-anchor-id="a-file-id-for-each-csv">A file ID for each CSV</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>file_info <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">file_path =</span> all_files,</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">file_hash =</span> tools<span class="sc">::</span><span class="fu">md5sum</span>(all_files),</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(file_info)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                                                        file_path
+question_2/2026-05-27/dzx/adkpxoljbf.csv question_2/2026-05-27/dzx/adkpxoljbf.csv
+question_2/2026-05-27/dzx/cyvqlnbord.csv question_2/2026-05-27/dzx/cyvqlnbord.csv
+question_2/2026-05-27/dzx/eygawqfhso.csv question_2/2026-05-27/dzx/eygawqfhso.csv
+question_2/2026-05-27/dzx/frobjglzdp.csv question_2/2026-05-27/dzx/frobjglzdp.csv
+question_2/2026-05-27/dzx/lcfanqgoev.csv question_2/2026-05-27/dzx/lcfanqgoev.csv
+question_2/2026-05-27/dzx/oapkxjcegq.csv question_2/2026-05-27/dzx/oapkxjcegq.csv
+                                                                file_hash
+question_2/2026-05-27/dzx/adkpxoljbf.csv 904b1ae66965ffc9ee7cf86abfac332d
+question_2/2026-05-27/dzx/cyvqlnbord.csv fdd0bd31fd9d7f78e4f831e7afec8f4c
+question_2/2026-05-27/dzx/eygawqfhso.csv 9600cd51a31dfa332d3c90828d423a5c
+question_2/2026-05-27/dzx/frobjglzdp.csv c7bc9ba5f06c3682b0e303317e010e0d
+question_2/2026-05-27/dzx/lcfanqgoev.csv c9905c69a0cd43b1c94d03922817db60
+question_2/2026-05-27/dzx/oapkxjcegq.csv 98c2384fce45b715e4a6bdfd67790976</code></pre>
+</div>
+</div>
+</section>
+<section id="identifying-originals" class="level2">
+<h2 class="anchored" data-anchor-id="identifying-originals">Identifying originals</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>original_files <span class="ot">&lt;-</span> file_info[<span class="sc">!</span><span class="fu">duplicated</span>(file_info<span class="sc">$</span>file_hash), ]</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>duplicate_files <span class="ot">&lt;-</span> file_info[<span class="fu">duplicated</span>(file_info<span class="sc">$</span>file_hash), ]</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(original_files)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 207</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(duplicate_files)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+</section>
+<section id="two-columned-table" class="level2">
+<h2 class="anchored" data-anchor-id="two-columned-table">Two-columned Table</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>duplicate_table <span class="ot">&lt;-</span> duplicate_files <span class="sc">%&gt;%</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    original_files,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">&quot;file_hash&quot;</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">suffix =</span> <span class="fu">c</span>(<span class="st">&quot;_deleted_duplicate&quot;</span>, <span class="st">&quot;_original_retained&quot;</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">original_file_retained =</span> file_path_original_retained,</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">deleted_duplicate_file =</span> file_path_deleted_duplicate</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>duplicate_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] original_file_retained deleted_duplicate_file
+&lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+</div>
+</section>
+<section id="deleting-duplicate-files" class="level2">
+<h2 class="anchored" data-anchor-id="deleting-duplicate-files">Deleting duplicate files</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>duplicates_to_delete <span class="ot">&lt;-</span> duplicate_table<span class="sc">$</span>deleted_duplicate_file</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>duplicates_to_delete <span class="ot">&lt;-</span> duplicates_to_delete[<span class="fu">file.exists</span>(duplicates_to_delete)]</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="fu">file.remove</span>(duplicates_to_delete)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>logical(0)</code></pre>
+</div>
+</div>
+<section id="checking-remaining-files" class="level3">
+<h3 class="anchored" data-anchor-id="checking-remaining-files">Checking remaining files</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>remaining_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">path =</span> <span class="st">&quot;question_2&quot;</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">pattern =</span> <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.csv$&quot;</span>,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">recursive =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">full.names =</span> <span class="cn">TRUE</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(remaining_files)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 207</code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="multiple-models" class="level1">
+<h1><strong>(3) Multiple Models</strong></h1>
+<section id="load-packages-1" class="level2">
+<h2 class="anchored" data-anchor-id="load-packages-1">Load Packages</h2>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Matrix</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: &#39;Matrix&#39;</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from &#39;package:tidyr&#39;:
+
+    expand, pack, unpack</code></pre>
+</div>
+</div>
+</section>
+<section id="reading-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="reading-the-data">Reading the Data</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>benchmarks <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">&quot;benchmarks.csv&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 3702 Columns: 9
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: &quot;,&quot;
+chr (5): sped, ethnicity, frl, ell, season
+dbl (4): sid, grade, reading, math
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+</div>
+</section>
+<section id="recode-season-into-wave" class="level2">
+<h2 class="anchored" data-anchor-id="recode-season-into-wave">Recode season into wave</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>benchmarks <span class="ot">&lt;-</span> benchmarks <span class="sc">%&gt;%</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">wave =</span> <span class="fu">case_when</span>(</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>      season <span class="sc">==</span> <span class="st">&quot;fall&quot;</span> <span class="sc">~</span> <span class="dv">0</span>,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>      season <span class="sc">==</span> <span class="st">&quot;winter&quot;</span> <span class="sc">~</span> <span class="dv">1</span>,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>      season <span class="sc">==</span> <span class="st">&quot;spring&quot;</span> <span class="sc">~</span> <span class="dv">2</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="fu">table</span>(benchmarks<span class="sc">$</span>season, benchmarks<span class="sc">$</span>wave)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        
+            0    1    2
+  fall   1234    0    0
+  spring    0    0 1234
+  winter    0 1234    0</code></pre>
+</div>
+</div>
+</section>
+<section id="function-for-slope-reliability" class="level2">
+<h2 class="anchored" data-anchor-id="function-for-slope-reliability">Function for slope reliability</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>calculate_slope_reliability <span class="ot">&lt;-</span> <span class="cf">function</span>(data, subject_name) {</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  model_data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(sid, wave, <span class="at">score =</span> <span class="fu">all_of</span>(subject_name)) <span class="sc">%&gt;%</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">drop_na</span>(score, wave)</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  lme_model <span class="ot">&lt;-</span> <span class="fu">suppressWarnings</span>(</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">lmer</span>(score <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> wave <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">+</span> wave <span class="sc">|</span> sid),</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">REML =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">data =</span> model_data))</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  true_score_variance <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">VarCorr</span>(lme_model)) <span class="sc">%&gt;%</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(grp <span class="sc">==</span> <span class="st">&quot;sid&quot;</span>, var1 <span class="sc">==</span> <span class="st">&quot;wave&quot;</span>, <span class="fu">is.na</span>(var2)) <span class="sc">%&gt;%</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(vcov)</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  student_slopes <span class="ot">&lt;-</span> model_data <span class="sc">%&gt;%</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(sid) <span class="sc">%&gt;%</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_modify</span>(<span class="sc">~</span> {</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>      student_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(score <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> wave, <span class="at">data =</span> .x)</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>      <span class="fu">tibble</span>(<span class="at">slope =</span> <span class="fu">coef</span>(student_model)[<span class="st">&quot;wave&quot;</span>])</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>    }) <span class="sc">%&gt;%</span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ungroup</span>()</span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>  observed_score_variance <span class="ot">&lt;-</span> <span class="fu">var</span>(student_slopes<span class="sc">$</span>slope, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>  slope_reliability <span class="ot">&lt;-</span> true_score_variance <span class="sc">/</span> observed_score_variance</span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">subject =</span> subject_name,</span>
+<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">true_score_variance =</span> true_score_variance,</span>
+<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">observed_score_variance =</span> observed_score_variance,</span>
+<span id="cb30-32"><a href="#cb30-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">slope_reliability =</span> slope_reliability</span>
+<span id="cb30-33"><a href="#cb30-33" aria-hidden="true" tabindex="-1"></a>  )}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="running-that-function-by-grade-and-subject" class="level2">
+<h2 class="anchored" data-anchor-id="running-that-function-by-grade-and-subject">Running that function by grade and subject</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> benchmarks <span class="sc">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(grade) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(<span class="sc">~</span> <span class="fu">bind_rows</span>(</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">calculate_slope_reliability</span>(.x, <span class="st">&quot;reading&quot;</span>),</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">calculate_slope_reliability</span>(.x, <span class="st">&quot;math&quot;</span>)</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">%&gt;%</span></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>boundary (singular) fit: see help(&#39;isSingular&#39;)</code></pre>
+</div>
+</div>
+</section>
+<section id="making-table" class="level2">
+<h2 class="anchored" data-anchor-id="making-table">Making Table</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>results <span class="sc">%&gt;%</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">true_score_variance =</span> <span class="fu">round</span>(true_score_variance, <span class="dv">3</span>),</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">observed_score_variance =</span> <span class="fu">round</span>(observed_score_variance, <span class="dv">3</span>),</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">slope_reliability =</span> <span class="fu">round</span>(slope_reliability, <span class="dv">3</span>)</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(</span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">&quot;Slope Reliability Estimates by Grade and Subject&quot;</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Slope Reliability Estimates by Grade and Subject</caption>
+<colgroup>
+<col style="width: 7%">
+<col style="width: 10%">
+<col style="width: 26%">
+<col style="width: 31%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">grade</th>
+<th style="text-align: left;">subject</th>
+<th style="text-align: right;">true_score_variance</th>
+<th style="text-align: right;">observed_score_variance</th>
+<th style="text-align: right;">slope_reliability</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">7.952</td>
+<td style="text-align: right;">92.980</td>
+<td style="text-align: right;">0.086</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">1.531</td>
+<td style="text-align: right;">5.727</td>
+<td style="text-align: right;">0.267</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">14.737</td>
+<td style="text-align: right;">104.881</td>
+<td style="text-align: right;">0.141</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">0.799</td>
+<td style="text-align: right;">5.701</td>
+<td style="text-align: right;">0.140</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">28.814</td>
+<td style="text-align: right;">109.381</td>
+<td style="text-align: right;">0.263</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">0.913</td>
+<td style="text-align: right;">5.681</td>
+<td style="text-align: right;">0.161</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</section>
+<section id="slope-reliability-function" class="level1">
+<h1>(4) <strong>Slope Reliability Function</strong></h1>
+<section id="function" class="level2">
+<h2 class="anchored" data-anchor-id="function">Function</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>slope_reliability <span class="ot">&lt;-</span> <span class="cf">function</span>(model) {</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  model_data <span class="ot">&lt;-</span> <span class="fu">model.frame</span>(model)</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  outcome_name <span class="ot">&lt;-</span> <span class="fu">names</span>(model_data)[<span class="dv">1</span>]</span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  slope_name <span class="ot">&lt;-</span> <span class="fu">names</span>(<span class="fu">fixef</span>(model))[<span class="dv">2</span>]</span>
+<span id="cb34-7"><a href="#cb34-7" aria-hidden="true" tabindex="-1"></a>  id_name <span class="ot">&lt;-</span> <span class="fu">names</span>(lme4<span class="sc">::</span><span class="fu">getME</span>(model, <span class="st">&quot;flist&quot;</span>))[<span class="dv">1</span>]</span>
+<span id="cb34-8"><a href="#cb34-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-9"><a href="#cb34-9" aria-hidden="true" tabindex="-1"></a>  true_score_variance <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">VarCorr</span>(model)) <span class="sc">%&gt;%</span></span>
+<span id="cb34-10"><a href="#cb34-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(</span>
+<span id="cb34-11"><a href="#cb34-11" aria-hidden="true" tabindex="-1"></a>      grp <span class="sc">==</span> id_name,</span>
+<span id="cb34-12"><a href="#cb34-12" aria-hidden="true" tabindex="-1"></a>      var1 <span class="sc">==</span> slope_name,</span>
+<span id="cb34-13"><a href="#cb34-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">is.na</span>(var2)</span>
+<span id="cb34-14"><a href="#cb34-14" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb34-15"><a href="#cb34-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(vcov)</span>
+<span id="cb34-16"><a href="#cb34-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-17"><a href="#cb34-17" aria-hidden="true" tabindex="-1"></a>  student_slopes <span class="ot">&lt;-</span> model_data <span class="sc">%&gt;%</span></span>
+<span id="cb34-18"><a href="#cb34-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(.data[[id_name]]) <span class="sc">%&gt;%</span></span>
+<span id="cb34-19"><a href="#cb34-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_modify</span>(<span class="sc">~</span> {</span>
+<span id="cb34-20"><a href="#cb34-20" aria-hidden="true" tabindex="-1"></a>      lm_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
+<span id="cb34-21"><a href="#cb34-21" aria-hidden="true" tabindex="-1"></a>        <span class="fu">as.formula</span>(<span class="fu">paste</span>(outcome_name, <span class="st">&quot;~&quot;</span>, slope_name)),</span>
+<span id="cb34-22"><a href="#cb34-22" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> .x</span>
+<span id="cb34-23"><a href="#cb34-23" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb34-24"><a href="#cb34-24" aria-hidden="true" tabindex="-1"></a>      <span class="fu">tibble</span>(<span class="at">slope =</span> <span class="fu">coef</span>(lm_model)[slope_name])</span>
+<span id="cb34-25"><a href="#cb34-25" aria-hidden="true" tabindex="-1"></a>    }) <span class="sc">%&gt;%</span></span>
+<span id="cb34-26"><a href="#cb34-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ungroup</span>()</span>
+<span id="cb34-27"><a href="#cb34-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-28"><a href="#cb34-28" aria-hidden="true" tabindex="-1"></a>  observed_score_variance <span class="ot">&lt;-</span> <span class="fu">var</span>(student_slopes<span class="sc">$</span>slope, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb34-29"><a href="#cb34-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb34-30"><a href="#cb34-30" aria-hidden="true" tabindex="-1"></a>  true_score_variance <span class="sc">/</span> observed_score_variance}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="creating-models-for-question-3" class="level2">
+<h2 class="anchored" data-anchor-id="creating-models-for-question-3">Creating models for Question 3</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>fit_growth_model <span class="ot">&lt;-</span> <span class="cf">function</span>(data, subject_name) {</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  model_data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(sid, wave, <span class="at">score =</span> <span class="fu">all_of</span>(subject_name)) <span class="sc">%&gt;%</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">drop_na</span>()</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">suppressWarnings</span>(</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">lmer</span>(</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>      score <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> wave <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">+</span> wave <span class="sc">|</span> sid),</span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">REML =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">data =</span> model_data))}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="apply-the-function" class="level2">
+<h2 class="anchored" data-anchor-id="apply-the-function">Apply the function</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>q4_results <span class="ot">&lt;-</span> benchmarks <span class="sc">%&gt;%</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(grade) <span class="sc">%&gt;%</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_modify</span>(<span class="sc">~</span> {</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    reading_model <span class="ot">&lt;-</span> <span class="fu">fit_growth_model</span>(.x, <span class="st">&quot;reading&quot;</span>)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    math_model <span class="ot">&lt;-</span> <span class="fu">fit_growth_model</span>(.x, <span class="st">&quot;math&quot;</span>)</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">subject =</span> <span class="fu">c</span>(<span class="st">&quot;reading&quot;</span>, <span class="st">&quot;math&quot;</span>),</span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">slope_reliability =</span> <span class="fu">c</span>(</span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slope_reliability</span>(reading_model),</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">slope_reliability</span>(math_model)</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>  }) <span class="sc">%&gt;%</span></span>
+<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>boundary (singular) fit: see help(&#39;isSingular&#39;)</code></pre>
+</div>
+</div>
+</section>
+<section id="simple-table" class="level2">
+<h2 class="anchored" data-anchor-id="simple-table">Simple Table</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>q4_results <span class="sc">%&gt;%</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">slope_reliability =</span> <span class="fu">round</span>(slope_reliability, <span class="dv">3</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">&quot;Slope Reliability Estimates from the Function&quot;</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Slope Reliability Estimates from the Function</caption>
+<thead>
+<tr class="header">
+<th style="text-align: right;">grade</th>
+<th style="text-align: left;">subject</th>
+<th style="text-align: right;">slope_reliability</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">0.086</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">0.267</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">0.141</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">0.140</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">0.263</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">0.161</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</section>
+<section id="confidence-interval-ci" class="level1">
+<h1><strong>(5) 95% Confidence Interval (CI)</strong></h1>
+<section id="bootstrap-sample-function" class="level2">
+<h2 class="anchored" data-anchor-id="bootstrap-sample-function">Bootstrap sample function</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>boot_fun <span class="ot">&lt;-</span> <span class="cf">function</span>(df, id_var, time_var, y_var, n_boot) {</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  id_var <span class="ot">&lt;-</span> rlang<span class="sc">::</span><span class="fu">ensym</span>(id_var)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  id_name <span class="ot">&lt;-</span> rlang<span class="sc">::</span><span class="fu">as_string</span>(id_var)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>  ids <span class="ot">&lt;-</span> <span class="fu">unique</span>(df[[id_name]])</span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">length</span>(ids)</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>  boots <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, n_boot)</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(n_boot)) {</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>    samp_ids <span class="ot">&lt;-</span> base<span class="sc">::</span><span class="fu">sample</span>(ids, <span class="at">size =</span> n, <span class="at">replace =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>    boot_df <span class="ot">&lt;-</span> <span class="fu">map2_dfr</span>(</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>      samp_ids,</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>      <span class="fu">seq_along</span>(samp_ids),</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>      <span class="cf">function</span>(id, j) {</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>        df <span class="sc">%&gt;%</span></span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>          <span class="fu">filter</span>(.data[[id_name]] <span class="sc">==</span> id) <span class="sc">%&gt;%</span></span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>          <span class="fu">mutate</span>(<span class="at">boot_id =</span> <span class="fu">paste0</span>(id, <span class="st">&quot;_&quot;</span>, j))</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>      }</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>    boots[[i]] <span class="ot">&lt;-</span> boot_df</span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a>  boots</span>
+<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="new-slope-reliability-function" class="level2">
+<h2 class="anchored" data-anchor-id="new-slope-reliability-function">New slope reliability function</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>rel_fun <span class="ot">&lt;-</span> <span class="cf">function</span>(df, id_var, time_var, y_var) {</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  id_name <span class="ot">&lt;-</span> rlang<span class="sc">::</span><span class="fu">as_name</span>(rlang<span class="sc">::</span><span class="fu">ensym</span>(id_var))</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  time_name <span class="ot">&lt;-</span> rlang<span class="sc">::</span><span class="fu">as_name</span>(rlang<span class="sc">::</span><span class="fu">ensym</span>(time_var))</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  y_name <span class="ot">&lt;-</span> y_var</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>  dat <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">id =</span> <span class="fu">all_of</span>(id_name),</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">time =</span> <span class="fu">all_of</span>(time_name),</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="fu">all_of</span>(y_name)</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">drop_na</span>()</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>  mod <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">suppressWarnings</span>(</span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a>      <span class="fu">lmer</span>(</span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>        y <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> time <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">+</span> time <span class="sc">|</span> id),</span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">REML =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> dat</span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NULL</span></span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(mod)) {</span>
+<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(<span class="cn">NA_real_</span>)</span>
+<span id="cb40-28"><a href="#cb40-28" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb40-29"><a href="#cb40-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-30"><a href="#cb40-30" aria-hidden="true" tabindex="-1"></a>  true_var <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(<span class="fu">VarCorr</span>(mod)) <span class="sc">%&gt;%</span></span>
+<span id="cb40-31"><a href="#cb40-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(grp <span class="sc">==</span> <span class="st">&quot;id&quot;</span>, var1 <span class="sc">==</span> <span class="st">&quot;time&quot;</span>, <span class="fu">is.na</span>(var2)) <span class="sc">%&gt;%</span></span>
+<span id="cb40-32"><a href="#cb40-32" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(vcov)</span>
+<span id="cb40-33"><a href="#cb40-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-34"><a href="#cb40-34" aria-hidden="true" tabindex="-1"></a>  slopes <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span></span>
+<span id="cb40-35"><a href="#cb40-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(id) <span class="sc">%&gt;%</span></span>
+<span id="cb40-36"><a href="#cb40-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_modify</span>(<span class="sc">~</span> {</span>
+<span id="cb40-37"><a href="#cb40-37" aria-hidden="true" tabindex="-1"></a>      lm_mod <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> time, <span class="at">data =</span> .x)</span>
+<span id="cb40-38"><a href="#cb40-38" aria-hidden="true" tabindex="-1"></a>      <span class="fu">tibble</span>(<span class="at">slope =</span> <span class="fu">coef</span>(lm_mod)[<span class="st">&quot;time&quot;</span>])</span>
+<span id="cb40-39"><a href="#cb40-39" aria-hidden="true" tabindex="-1"></a>    }) <span class="sc">%&gt;%</span></span>
+<span id="cb40-40"><a href="#cb40-40" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ungroup</span>()</span>
+<span id="cb40-41"><a href="#cb40-41" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-42"><a href="#cb40-42" aria-hidden="true" tabindex="-1"></a>  obs_var <span class="ot">&lt;-</span> <span class="fu">var</span>(slopes<span class="sc">$</span>slope, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb40-43"><a href="#cb40-43" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb40-44"><a href="#cb40-44" aria-hidden="true" tabindex="-1"></a>  true_var <span class="sc">/</span> obs_var</span>
+<span id="cb40-45"><a href="#cb40-45" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="bootstraps-for-each-grade-and-subject" class="level2">
+<h2 class="anchored" data-anchor-id="bootstraps-for-each-grade-and-subject">Bootstraps for each grade and subject</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>boot_grade <span class="ot">&lt;-</span> <span class="cf">function</span>(df, subj, <span class="at">n_boot =</span> <span class="dv">100</span>) {</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  boots <span class="ot">&lt;-</span> <span class="fu">boot_fun</span>(</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">df =</span> df,</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">id_var =</span> sid,</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">time_var =</span> wave,</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">y_var =</span> subj,</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_boot =</span> n_boot</span>
+<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a>  rels <span class="ot">&lt;-</span> <span class="fu">map_dbl</span>(</span>
+<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a>    boots,</span>
+<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a>    <span class="sc">~</span> <span class="fu">rel_fun</span>(</span>
+<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">df =</span> .x,</span>
+<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">id_var =</span> boot_id,</span>
+<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">time_var =</span> wave,</span>
+<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">y_var =</span> subj</span>
+<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>(</span>
+<span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">subject =</span> subj,</span>
+<span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_size =</span> <span class="fu">n_distinct</span>(df<span class="sc">$</span>sid),</span>
+<span id="cb41-24"><a href="#cb41-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">ci_lower =</span> <span class="fu">quantile</span>(rels, <span class="fl">0.025</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb41-25"><a href="#cb41-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">ci_upper =</span> <span class="fu">quantile</span>(rels, <span class="fl">0.975</span>, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb41-26"><a href="#cb41-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_reliability =</span> <span class="fu">median</span>(rels, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb41-27"><a href="#cb41-27" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb41-28"><a href="#cb41-28" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="run-bootstraps-and-make-table" class="level2">
+<h2 class="anchored" data-anchor-id="run-bootstraps-and-make-table">Run bootstraps and make table</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>grade_subjects <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(</span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">grade =</span> <span class="fu">unique</span>(benchmarks<span class="sc">$</span>grade),</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">subject =</span> <span class="fu">c</span>(<span class="st">&quot;reading&quot;</span>, <span class="st">&quot;math&quot;</span>),</span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>ci_tab <span class="ot">&lt;-</span> <span class="fu">map2_dfr</span>(</span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>  grade_subjects<span class="sc">$</span>grade,</span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>  grade_subjects<span class="sc">$</span>subject,</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">function</span>(g, s) {</span>
+<span id="cb42-13"><a href="#cb42-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb42-14"><a href="#cb42-14" aria-hidden="true" tabindex="-1"></a>    df_grade <span class="ot">&lt;-</span> benchmarks <span class="sc">%&gt;%</span></span>
+<span id="cb42-15"><a href="#cb42-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(grade <span class="sc">==</span> g)</span>
+<span id="cb42-16"><a href="#cb42-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb42-17"><a href="#cb42-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">boot_grade</span>(</span>
+<span id="cb42-18"><a href="#cb42-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">df =</span> df_grade,</span>
+<span id="cb42-19"><a href="#cb42-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">subj =</span> s,</span>
+<span id="cb42-20"><a href="#cb42-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">n_boot =</span> <span class="dv">100</span></span>
+<span id="cb42-21"><a href="#cb42-21" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb42-22"><a href="#cb42-22" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="at">grade =</span> g, <span class="at">.before =</span> subject)</span>
+<span id="cb42-23"><a href="#cb42-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb42-24"><a href="#cb42-24" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)
+boundary (singular) fit: see help(&#39;isSingular&#39;)</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>ci_tab <span class="sc">%&gt;%</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">transmute</span>(</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">grade =</span> grade,</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">subject =</span> subject,</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_size =</span> n_size,</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">ci_lower =</span> <span class="fu">round</span>(ci_lower, <span class="dv">3</span>),</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">ci_upper =</span> <span class="fu">round</span>(ci_upper, <span class="dv">3</span>),</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_reliability =</span> <span class="fu">round</span>(median_reliability, <span class="dv">3</span>)</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable</span>(</span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">caption =</span> <span class="st">&quot;Bootstrapped Slope Reliability Estimates with 95% Confidence Intervals&quot;</span></span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Bootstrapped Slope Reliability Estimates with 95% Confidence Intervals</caption>
+<thead>
+<tr class="header">
+<th style="text-align: right;">grade</th>
+<th style="text-align: left;">subject</th>
+<th style="text-align: right;">n_size</th>
+<th style="text-align: right;">ci_lower</th>
+<th style="text-align: right;">ci_upper</th>
+<th style="text-align: right;">median_reliability</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">395</td>
+<td style="text-align: right;">0.037</td>
+<td style="text-align: right;">0.167</td>
+<td style="text-align: right;">0.086</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">433</td>
+<td style="text-align: right;">0.037</td>
+<td style="text-align: right;">0.301</td>
+<td style="text-align: right;">0.127</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">reading</td>
+<td style="text-align: right;">406</td>
+<td style="text-align: right;">0.032</td>
+<td style="text-align: right;">0.408</td>
+<td style="text-align: right;">0.263</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">395</td>
+<td style="text-align: right;">0.064</td>
+<td style="text-align: right;">0.386</td>
+<td style="text-align: right;">0.272</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">433</td>
+<td style="text-align: right;">0.000</td>
+<td style="text-align: right;">0.324</td>
+<td style="text-align: right;">0.128</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">math</td>
+<td style="text-align: right;">406</td>
+<td style="text-align: right;">0.012</td>
+<td style="text-align: right;">0.302</td>
+<td style="text-align: right;">0.168</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</section>
 
 </main>
 <!-- /main column -->

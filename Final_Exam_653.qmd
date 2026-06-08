@@ -12,6 +12,7 @@ editor: visual
 ## Load Packages
 
 ```{r}
+#| echo: false
 library(tidyverse)
 library(httr)
 library(jsonlite)
@@ -155,6 +156,7 @@ length(remaining_files)
 ## Load Packages
 
 ```{r}
+#| echo: false
 library(lme4)
 library(knitr)
 
@@ -339,27 +341,32 @@ q4_results %>%
 boot_fun <- function(df, id_var, time_var, y_var, n_boot) {
   
   id_var <- rlang::ensym(id_var)
+  id_name <- rlang::as_string(id_var)
   
-  ids <- unique(df[[rlang::as_string(id_var)]])
+  ids <- unique(df[[id_name]])
   n <- length(ids)
   
   boots <- vector("list", n_boot)
   
   for (i in seq_len(n_boot)) {
     
-    samp_ids <- sample(ids, size = n, replace = TRUE)
+    samp_ids <- base::sample(ids, size = n, replace = TRUE)
     
     boot_df <- map2_dfr(
       samp_ids,
       seq_along(samp_ids),
       function(id, j) {
         df %>%
-          filter(.data[[rlang::as_string(id_var)]] == id) %>%
-          mutate(boot_id = paste0(id, "_", j))})
+          filter(.data[[id_name]] == id) %>%
+          mutate(boot_id = paste0(id, "_", j))
+      }
+    )
     
-    boots[[i]] <- boot_df}
+    boots[[i]] <- boot_df
+  }
   
-  boots}
+  boots
+}
 ```
 
 ## New slope reliability function
@@ -369,12 +376,7 @@ rel_fun <- function(df, id_var, time_var, y_var) {
   
   id_name <- rlang::as_name(rlang::ensym(id_var))
   time_name <- rlang::as_name(rlang::ensym(time_var))
-  
-  if (is.character(y_var)) {
-    y_name <- y_var
-  } else {
-    y_name <- rlang::as_name(rlang::ensym(y_var))
-  }
+  y_name <- y_var
   
   dat <- df %>%
     select(
@@ -415,7 +417,11 @@ rel_fun <- function(df, id_var, time_var, y_var) {
   
   true_var / obs_var
 }
+```
 
+## Bootstraps for each grade and subject
+
+```{r}
 
 boot_grade <- function(df, subj, n_boot = 100) {
   
@@ -442,36 +448,50 @@ boot_grade <- function(df, subj, n_boot = 100) {
     n_size = n_distinct(df$sid),
     ci_lower = quantile(rels, 0.025, na.rm = TRUE),
     ci_upper = quantile(rels, 0.975, na.rm = TRUE),
-    median_slope_reliability = median(rels, na.rm = TRUE)
+    median_reliability = median(rels, na.rm = TRUE)
   )
 }
 ```
 
-## Running 100 bootstraps for each grade and subject
+## Run bootstraps and make table
 
 ```{r}
+
 set.seed(123)
 
-ci_tab <- benchmarks %>%
-  group_by(grade) %>%
-  group_modify(~ bind_rows(
-    boot_grade(.x, "reading", n_boot = 100),
-    boot_grade(.x, "math", n_boot = 100)
-  )) %>%
-  ungroup()
+grade_subjects <- expand.grid(
+  grade = unique(benchmarks$grade),
+  subject = c("reading", "math"),
+  stringsAsFactors = FALSE
+)
 
-```
+ci_tab <- map2_dfr(
+  grade_subjects$grade,
+  grade_subjects$subject,
+  function(g, s) {
+    
+    df_grade <- benchmarks %>%
+      filter(grade == g)
+    
+    boot_grade(
+      df = df_grade,
+      subj = s,
+      n_boot = 100
+    ) %>%
+      mutate(grade = g, .before = subject)
+  }
+)
 
-## Making the table
-
-```{r}
 ci_tab %>%
-  mutate(
+  transmute(
+    grade = grade,
+    subject = subject,
+    n_size = n_size,
     ci_lower = round(ci_lower, 3),
     ci_upper = round(ci_upper, 3),
-    median_slope_reliability = round(median_slope_reliability, 3)
+    median_reliability = round(median_reliability, 3)
   ) %>%
   kable(
-    caption = "Bootstrapped 95% Confidence Intervals for Slope Reliability"
+    caption = "Bootstrapped Slope Reliability Estimates with 95% Confidence Intervals"
   )
 ```
