@@ -102,6 +102,7 @@ head(file_info)
 ## Identifying originals
 
 ```{r}
+
 original_files <- file_info[!duplicated(file_info$file_hash), ]
 
 duplicate_files <- file_info[duplicated(file_info$file_hash), ]
@@ -109,6 +110,17 @@ duplicate_files <- file_info[duplicated(file_info$file_hash), ]
 nrow(original_files)
 nrow(duplicate_files)
 
+```
+
+#### Duplicate Table for q2
+
+```{r}
+#| eval: false
+write.csv(
+  duplicate_table,
+  "duplicate_table_for_q2.csv",
+  row.names = FALSE
+)
 ```
 
 ## Two-columned Table
