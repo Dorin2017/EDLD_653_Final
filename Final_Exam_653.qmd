@@ -6,3 +6,472 @@ format:
     embed-resources: true
 editor: visual
 ---
+
+# **(1) API calls to chess.com**
+
+## Load Packages
+
+```{r}
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(tools)
+```
+
+## Player list
+
+```{r}
+response <- GET("https://api.chess.com/pub/country/US/players")
+
+player_list <- fromJSON(rawToChar(response$content))$players
+
+first_500 <- player_list[1:500]
+```
+
+## Self Helper Function
+
+```{r}
+get_player_data <- function(username) {
+  
+  info_response <- GET(paste0("https://api.chess.com/pub/player/", username))
+  stats_response <- GET(paste0("https://api.chess.com/pub/player/", username, "/stats"))
+  
+  info <- fromJSON(rawToChar(info_response$content))
+  stats <- fromJSON(rawToChar(stats_response$content))
+  
+  data.frame(
+    username = username,
+    name = ifelse(is.null(info$name), NA, info$name),
+    followers = ifelse(is.null(info$followers), NA, info$followers),
+    location = ifelse(is.null(info$location), NA, info$location),
+    last_online = as.POSIXct(info$last_online, origin = "1970-01-01", tz = "UTC"),
+    
+    rapid_last_rating = ifelse(is.null(stats$chess_rapid$last$rating), NA, stats$chess_rapid$last$rating),
+    rapid_best_rating = ifelse(is.null(stats$chess_rapid$best$rating), NA, stats$chess_rapid$best$rating),
+    rapid_record_win = ifelse(is.null(stats$chess_rapid$record$win), NA, stats$chess_rapid$record$win),
+    rapid_record_loss = ifelse(is.null(stats$chess_rapid$record$loss), NA, stats$chess_rapid$record$loss),
+    rapid_record_draw = ifelse(is.null(stats$chess_rapid$record$draw), NA, stats$chess_rapid$record$draw)
+  )
+}
+```
+
+## Running for the first 500 players
+
+```{r}
+chess_players_df <- map_dfr(first_500, get_player_data)
+```
+
+### Viewing the data frame
+
+```{r}
+glimpse(chess_players_df)
+head(chess_players_df)
+```
+
+# **(2) Identify & Remove Duplicate Files**
+
+## R code in the Quarto document
+
+```{r}
+main_folder <- "question_2"
+
+all_files <- list.files(
+  path = main_folder,
+  pattern = "\\.csv$",
+  recursive = TRUE,
+  full.names = TRUE
+)
+
+length(all_files)
+```
+
+## A file ID for each CSV
+
+```{r}
+file_info <- data.frame(
+  file_path = all_files,
+  file_hash = tools::md5sum(all_files),
+  stringsAsFactors = FALSE)
+
+head(file_info)
+```
+
+## Identifying originals
+
+```{r}
+original_files <- file_info[!duplicated(file_info$file_hash), ]
+
+duplicate_files <- file_info[duplicated(file_info$file_hash), ]
+
+nrow(original_files)
+nrow(duplicate_files)
+
+```
+
+## Two-columned Table
+
+```{r}
+duplicate_table <- duplicate_files %>%
+  left_join(
+    original_files,
+    by = "file_hash",
+    suffix = c("_deleted_duplicate", "_original_retained")
+  ) %>%
+  select(
+    original_file_retained = file_path_original_retained,
+    deleted_duplicate_file = file_path_deleted_duplicate
+  )
+
+duplicate_table
+```
+
+## Deleting duplicate files
+
+```{r}
+duplicates_to_delete <- duplicate_table$deleted_duplicate_file
+
+duplicates_to_delete <- duplicates_to_delete[file.exists(duplicates_to_delete)]
+
+file.remove(duplicates_to_delete)
+```
+
+### Checking remaining files
+
+```{r}
+remaining_files <- list.files(
+  path = "question_2",
+  pattern = "\\.csv$",
+  recursive = TRUE,
+  full.names = TRUE
+)
+
+length(remaining_files)
+```
+
+# **(3) Multiple Models**
+
+## Load Packages
+
+```{r}
+library(lme4)
+library(knitr)
+
+```
+
+## Reading the Data
+
+```{r}
+benchmarks <- read_csv("benchmarks.csv")
+```
+
+## Recode season into wave
+
+```{r}
+benchmarks <- benchmarks %>%
+  mutate(
+    wave = case_when(
+      season == "fall" ~ 0,
+      season == "winter" ~ 1,
+      season == "spring" ~ 2
+    )
+  )
+
+table(benchmarks$season, benchmarks$wave)
+```
+
+## Function for slope reliability
+
+```{r}
+calculate_slope_reliability <- function(data, subject_name) {
+  
+  model_data <- data %>%
+    select(sid, wave, score = all_of(subject_name)) %>%
+    drop_na(score, wave)
+  
+  lme_model <- suppressWarnings(
+    lmer(score ~ 1 + wave + (1 + wave | sid),
+         REML = FALSE,
+         data = model_data))
+  
+  true_score_variance <- as.data.frame(VarCorr(lme_model)) %>%
+    filter(grp == "sid", var1 == "wave", is.na(var2)) %>%
+    pull(vcov)
+  
+  student_slopes <- model_data %>%
+    group_by(sid) %>%
+    group_modify(~ {
+      student_model <- lm(score ~ 1 + wave, data = .x)
+      tibble(slope = coef(student_model)["wave"])
+    }) %>%
+    ungroup()
+  
+  observed_score_variance <- var(student_slopes$slope, na.rm = TRUE)
+  
+  slope_reliability <- true_score_variance / observed_score_variance
+  
+  tibble(
+    subject = subject_name,
+    true_score_variance = true_score_variance,
+    observed_score_variance = observed_score_variance,
+    slope_reliability = slope_reliability
+  )}
+```
+
+## Running that function by grade and subject
+
+```{r}
+results <- benchmarks %>%
+  group_by(grade) %>%
+  group_modify(~ bind_rows(
+    calculate_slope_reliability(.x, "reading"),
+    calculate_slope_reliability(.x, "math")
+  )) %>%
+  ungroup()
+```
+
+## Making Table
+
+```{r}
+results %>%
+  mutate(
+    true_score_variance = round(true_score_variance, 3),
+    observed_score_variance = round(observed_score_variance, 3),
+    slope_reliability = round(slope_reliability, 3)
+  ) %>%
+  kable(
+    caption = "Slope Reliability Estimates by Grade and Subject"
+  )
+```
+
+# (4) **Slope Reliability Function**
+
+## Function
+
+```{r}
+slope_reliability <- function(model) {
+  
+  model_data <- model.frame(model)
+  
+  outcome_name <- names(model_data)[1]
+  slope_name <- names(fixef(model))[2]
+  id_name <- names(lme4::getME(model, "flist"))[1]
+  
+  true_score_variance <- as.data.frame(VarCorr(model)) %>%
+    filter(
+      grp == id_name,
+      var1 == slope_name,
+      is.na(var2)
+    ) %>%
+    pull(vcov)
+  
+  student_slopes <- model_data %>%
+    group_by(.data[[id_name]]) %>%
+    group_modify(~ {
+      lm_model <- lm(
+        as.formula(paste(outcome_name, "~", slope_name)),
+        data = .x
+      )
+      tibble(slope = coef(lm_model)[slope_name])
+    }) %>%
+    ungroup()
+  
+  observed_score_variance <- var(student_slopes$slope, na.rm = TRUE)
+  
+  true_score_variance / observed_score_variance}
+
+```
+
+## Creating models for Question 3
+
+```{r}
+fit_growth_model <- function(data, subject_name) {
+  
+  model_data <- data %>%
+    select(sid, wave, score = all_of(subject_name)) %>%
+    drop_na()
+  
+  suppressWarnings(
+    lmer(
+      score ~ 1 + wave + (1 + wave | sid),
+      REML = FALSE,
+      data = model_data))}
+```
+
+## Apply the function
+
+```{r}
+q4_results <- benchmarks %>%
+  group_by(grade) %>%
+  group_modify(~ {
+    
+    reading_model <- fit_growth_model(.x, "reading")
+    math_model <- fit_growth_model(.x, "math")
+    
+    tibble(
+      subject = c("reading", "math"),
+      slope_reliability = c(
+        slope_reliability(reading_model),
+        slope_reliability(math_model)
+      )
+    )
+  }) %>%
+  ungroup()
+```
+
+## Simple Table
+
+```{r}
+q4_results %>%
+  mutate(slope_reliability = round(slope_reliability, 3)) %>%
+  kable(
+    caption = "Slope Reliability Estimates from the Function"
+  )
+
+```
+
+# **(5) 95% Confidence Interval (CI)**
+
+## Bootstrap sample function
+
+```{r}
+boot_fun <- function(df, id_var, time_var, y_var, n_boot) {
+  
+  id_var <- rlang::ensym(id_var)
+  
+  ids <- unique(df[[rlang::as_string(id_var)]])
+  n <- length(ids)
+  
+  boots <- vector("list", n_boot)
+  
+  for (i in seq_len(n_boot)) {
+    
+    samp_ids <- sample(ids, size = n, replace = TRUE)
+    
+    boot_df <- map2_dfr(
+      samp_ids,
+      seq_along(samp_ids),
+      function(id, j) {
+        df %>%
+          filter(.data[[rlang::as_string(id_var)]] == id) %>%
+          mutate(boot_id = paste0(id, "_", j))})
+    
+    boots[[i]] <- boot_df}
+  
+  boots}
+```
+
+## New slope reliability function
+
+```{r}
+rel_fun <- function(df, id_var, time_var, y_var) {
+  
+  id_name <- rlang::as_name(rlang::ensym(id_var))
+  time_name <- rlang::as_name(rlang::ensym(time_var))
+  
+  if (is.character(y_var)) {
+    y_name <- y_var
+  } else {
+    y_name <- rlang::as_name(rlang::ensym(y_var))
+  }
+  
+  dat <- df %>%
+    select(
+      id = all_of(id_name),
+      time = all_of(time_name),
+      y = all_of(y_name)
+    ) %>%
+    drop_na()
+  
+  mod <- tryCatch(
+    suppressWarnings(
+      lmer(
+        y ~ 1 + time + (1 + time | id),
+        REML = FALSE,
+        data = dat
+      )
+    ),
+    error = function(e) NULL
+  )
+  
+  if (is.null(mod)) {
+    return(NA_real_)
+  }
+  
+  true_var <- as.data.frame(VarCorr(mod)) %>%
+    filter(grp == "id", var1 == "time", is.na(var2)) %>%
+    pull(vcov)
+  
+  slopes <- dat %>%
+    group_by(id) %>%
+    group_modify(~ {
+      lm_mod <- lm(y ~ 1 + time, data = .x)
+      tibble(slope = coef(lm_mod)["time"])
+    }) %>%
+    ungroup()
+  
+  obs_var <- var(slopes$slope, na.rm = TRUE)
+  
+  true_var / obs_var
+}
+
+
+boot_grade <- function(df, subj, n_boot = 100) {
+  
+  boots <- boot_fun(
+    df = df,
+    id_var = sid,
+    time_var = wave,
+    y_var = subj,
+    n_boot = n_boot
+  )
+  
+  rels <- map_dbl(
+    boots,
+    ~ rel_fun(
+      df = .x,
+      id_var = boot_id,
+      time_var = wave,
+      y_var = subj
+    )
+  )
+  
+  tibble(
+    subject = subj,
+    n_size = n_distinct(df$sid),
+    ci_lower = quantile(rels, 0.025, na.rm = TRUE),
+    ci_upper = quantile(rels, 0.975, na.rm = TRUE),
+    median_slope_reliability = median(rels, na.rm = TRUE)
+  )
+}
+```
+
+## Running 100 bootstraps for each grade and subject
+
+```{r}
+set.seed(123)
+
+ci_tab <- benchmarks %>%
+  group_by(grade) %>%
+  group_modify(~ bind_rows(
+    boot_grade(.x, "reading", n_boot = 100),
+    boot_grade(.x, "math", n_boot = 100)
+  )) %>%
+  ungroup()
+
+```
+
+## Making the table
+
+```{r}
+ci_tab %>%
+  mutate(
+    ci_lower = round(ci_lower, 3),
+    ci_upper = round(ci_upper, 3),
+    median_slope_reliability = round(median_slope_reliability, 3)
+  ) %>%
+  kable(
+    caption = "Bootstrapped 95% Confidence Intervals for Slope Reliability"
+  )
+```
