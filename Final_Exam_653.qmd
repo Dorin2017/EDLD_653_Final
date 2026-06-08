@@ -1,6 +1,6 @@
 ---
 title: "Final_Exam_653"
-author: "Nishat"
+author: "Parvez"
 format:
   html:
     embed-resources: true
